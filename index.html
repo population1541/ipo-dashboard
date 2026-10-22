@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="600">
+<title>공모주 수요예측 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --navy:#1F3864; --rico:#AC324F; --alert:#C00000; --gold:#C08A2E;
+  --bg:#F5F6F8; --panel:#FFFFFF; --ink:#1B2230; --sub:#5E6675; --line:#DCE0E6;
+  --weekend:#EEF0F4; --done:#B7BDC8; --rowhi:#FFF4D6; --chg:#FDE9EC;
+  --fill-navy:#1F3864; --fill-rico:#AC324F;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --navy:#8FA8DA; --rico:#E06B87; --alert:#FF6B6B; --gold:#E0B060;
+  --bg:#12151B; --panel:#1A1E26; --ink:#E7EAF0; --sub:#9AA2B1; --line:#2C323D;
+  --weekend:#20252F; --done:#4A515E; --rowhi:#3A3420; --chg:#3B2026;
+  --fill-navy:#2D4C8A; --fill-rico:#B23C5A;
+  color-scheme:dark;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Pretendard,"Malgun Gothic","맑은 고딕",system-ui,sans-serif;font-size:14px;line-height:1.5;
+  font-variant-numeric:tabular-nums}
+.wrap{max-width:1320px;margin:0 auto;padding:28px 24px 48px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  border-bottom:3px solid var(--rico);padding-bottom:14px}
+h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
+.updated{color:var(--sub);font-size:13px}
+.xl{margin-left:10px;font-weight:700;color:var(--navy)}
+.brief{margin:14px 0 22px;font-size:16px;color:var(--ink)}
+.brief b{color:var(--rico)}
+.brief .warn{color:var(--alert);font-weight:700}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:22px}
+section h2{margin:0;padding:14px 18px;font-size:15px;font-weight:700;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+section h2 small{font-weight:400;color:var(--sub);font-size:12px}
+
+/* 타임라인 */
+.tl{overflow-x:auto;padding:0 0 10px}
+.grid{display:grid;position:relative}
+.dayhead{white-space:nowrap;overflow:visible;font-size:11px;color:var(--sub);text-align:center;padding:8px 0 6px;border-bottom:1px solid var(--line)}
+.dayhead.mon{color:var(--ink);font-weight:700}
+.dayhead.today{color:var(--rico);font-weight:800}
+.name{position:sticky;left:0;z-index:2;background:var(--panel);padding:0 12px 0 18px;font-weight:600;
+  white-space:nowrap;display:flex;align-items:center;height:34px;border-right:1px solid var(--line);cursor:pointer}
+.name:hover{color:var(--rico)}
+.cell{height:34px;border-bottom:1px dashed var(--line)}
+.cell.we{background:var(--weekend)}
+.bar{position:absolute;height:20px;border-radius:3px;color:#fff;font-size:11px;font-weight:700;
+  display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden;cursor:pointer}
+.bar.up{background:var(--fill-navy)} .bar.live{background:var(--fill-rico)} .bar.done{background:var(--done)}
+.bar.chg{outline:2px solid var(--alert);outline-offset:1px}
+.todayline{position:absolute;top:0;bottom:0;width:2px;background:var(--rico);opacity:.7;pointer-events:none}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--sub);font-weight:400}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;vertical-align:-2px;margin-right:4px}
+
+/* 표 */
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:5px 12px;
+  font:inherit;font-size:13px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--fill-navy);border-color:var(--fill-navy);color:#fff}
+input[type=search]{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel);color:var(--ink);width:180px}
+.chip:focus-visible,input:focus-visible,.name:focus-visible,a:focus-visible{outline:2px solid var(--rico);outline-offset:2px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:960px}
+th{background:var(--fill-navy);color:#fff;font-weight:700;font-size:13px;padding:9px 10px;text-align:left;white-space:nowrap;
+  position:sticky;top:0}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+td.wr{white-space:normal}
+tr.chg td{background:var(--chg)}
+tr.flash td{background:var(--rowhi);transition:background .6s}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:3px;white-space:nowrap}
+.b-live{background:var(--fill-rico);color:#fff}
+.b-up{background:var(--fill-navy);color:#fff}
+.b-done{background:var(--done);color:#fff}
+.b-none{border:1px solid var(--line);color:var(--sub)}
+.dday{font-weight:800;color:var(--rico)}
+.rev{font-size:12px;color:var(--sub)}
+.chgnote{color:var(--alert);font-weight:700;font-size:12px}
+.phone{min-width:150px;max-width:230px}
+a.corp{color:var(--ink);font-weight:700;text-decoration:none;border-bottom:1px solid var(--line)}
+a.corp:hover{color:var(--rico);border-color:var(--rico)}
+.muted{color:var(--sub)}
+a{color:var(--navy)}
+.empty{padding:28px 18px;color:var(--sub)}
+@media (prefers-reduced-motion:reduce){tr.flash td{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>공모주 수요예측</h1>
+    <div class="updated"><span id="updated"></span> <a class="xl" href="수요예측_일정.xlsx" download>엑셀 받기</a></div>
+  </header>
+  <p class="brief" id="brief"></p>
+
+  <section>
+    <h2>수요예측 일정표 <span class="legend">
+      <span><i style="background:var(--fill-rico)"></i>진행 중</span>
+      <span><i style="background:var(--fill-navy)"></i>예정</span>
+      <span><i style="background:var(--done)"></i>종료</span>
+      <span><i style="outline:2px solid var(--alert)"></i>정정으로 일정 변경</span></span></h2>
+    <div class="tl"><div class="grid" id="grid"></div></div>
+  </section>
+
+  <section>
+    <h2>신고서 목록 <small>최근 접수 순, 회사별 최신 신고서. 회사명을 누르면 DART 원문이 열림</small>
+      <span class="tools">
+        <button class="chip" data-f="all" aria-pressed="true">전체</button>
+        <button class="chip" data-f="live" aria-pressed="false">진행 중</button>
+        <button class="chip" data-f="up" aria-pressed="false">예정</button>
+        <button class="chip" data-f="done" aria-pressed="false">종료</button>
+        <button class="chip" data-f="chg" aria-pressed="false">일정 변경</button>
+        <input type="search" id="q" placeholder="회사명·증권사 검색" aria-label="회사명 또는 증권사 검색">
+      </span></h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>신고서 접수일</th><th>회사명</th><th>상태</th><th>수요예측 기간</th><th>마감</th>
+        <th>주관사</th><th>국내기관 문의처</th><th>기업IR</th><th>공모가 확정공고</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+const DATA = [{"rcp": "20261012000490", "date": "2026-10-12", "corp": "에이엘로봇", "start": "2026-10-28", "end": "2026-11-03", "close": "17:00", "firm": "대신증권", "phone": "02-769-2429, 02-769-2053", "ir": "2026년 10월 28일(수) ~ 2026년 11월 03일(화)", "confirm": "2026년 11월 04일(수)", "revisions": 1, "changed": "정정으로 일정 변경"}, {"rcp": "20261020000144", "date": "2026-10-20", "corp": "이에스티", "start": "2026-10-14", "end": "2026-10-20", "close": "17:00", "firm": "대신증권", "phone": "02-769-2963, 02-769-2961", "ir": "2026년 10월 14일(수) ~ 2026년 10월 20일(화)", "confirm": "2026년 10월 21일(수)", "revisions": 2, "changed": ""}, {"rcp": "20261008000623", "date": "2026-10-08", "corp": "영광", "start": "2026-10-13", "end": "2026-10-19", "close": "17:00", "firm": "한국투자증권", "phone": "02-3276-5958, 6917", "ir": "2026년 10월 6일(화) ~ 2026년 10월 16일(금)", "confirm": "2026년 10월 21일(수)", "revisions": 1, "changed": ""}, {"rcp": "20261014000436", "date": "2026-10-14", "corp": "래블업", "start": "2026-10-13", "end": "2026-10-19", "close": "17:00", "firm": "NH투자증권", "phone": "02-768-7462, 7467", "ir": "2026년 10월 6일(화) ~ 2026년 10월 16일(금)", "confirm": "2026년 10월 21일(수)", "revisions": 3, "changed": ""}, {"rcp": "20261016000159", "date": "2026-10-16", "corp": "하나에어로다이내믹스", "start": "2026-11-02", "end": "2026-11-06", "close": "17:00", "firm": "IBK투자증권", "phone": "02-6915-5337, 02-6915-5794, 02-6915-5361", "ir": "2026년 10월 29일(목) ~ 2026년 11월 05일(목)", "confirm": "2026년 11월 09일(월)", "revisions": 1, "changed": ""}, {"rcp": "20260923000255", "date": "2026-09-23", "corp": "티앤이코리아", "start": "2026-10-07", "end": "2026-10-14", "close": "17:00", "firm": "신한투자증권", "phone": "02-3772-2073, 4168, 4161, 3131", "ir": "2026년 9월 8일(화) ~ 2026년 10월 13일(화)", "confirm": "", "revisions": 1, "changed": ""}, {"rcp": "20260928000196", "date": "2026-09-28", "corp": "크리에이츠", "start": "2026-10-12", "end": "2026-10-16", "close": "17:00", "firm": "삼성증권", "phone": "02-2020-7414, 7375, 7651", "ir": "2026년 09월 28일(월) ~ 2026년 10월 16일(금)", "confirm": "2026년 10월 19일(월)", "revisions": 1, "changed": ""}, {"rcp": "20261016000268", "date": "2026-10-16", "corp": "넥스아이", "start": "2026-10-22", "end": "2026-10-28", "close": "17:00", "firm": "한국투자증권", "phone": "02-3276-6384, 5198", "ir": "2026년 10월 23일(금)", "confirm": "2026년 10월 30일(금)", "revisions": 1, "changed": ""}, {"rcp": "20261021000210", "date": "2026-10-21", "corp": "옵토닉스", "start": "2026-10-21", "end": "2026-10-27", "close": "17:00", "firm": "한국투자증권", "phone": "02-3276-5958, 6269", "ir": "2026년 10월 14일(수) ~ 2026년 10월 23일(금)", "confirm": "2026년 10월 29일(목)", "revisions": 1, "changed": ""}, {"rcp": "20260929000496", "date": "2026-09-29", "corp": "엠에스바이오", "start": "2026-09-28", "end": "2026-10-02", "close": "17:00", "firm": "KB증권", "phone": "02-6114-0904, 0995", "ir": "2026년 09월 11일(금) ~ 2026년 10월 02일(금)", "confirm": "2026년 10월 07일(수)", "revisions": 1, "changed": ""}, {"rcp": "20261001000078", "date": "2026-10-01", "corp": "디티에스", "start": "2026-10-01", "end": "2026-10-08", "close": "17:00", "firm": "대신증권", "phone": "02-769-2426, 02-769-2333", "ir": "2026년 10월 01일(목) ~ 2026년 10월 08일(목)", "confirm": "2026년 10월 12일(월)", "revisions": 1, "changed": ""}, {"rcp": "20261015000345", "date": "2026-10-15", "corp": "바로팜", "start": "2026-10-22", "end": "2026-10-28", "close": "17:00", "firm": "미래에셋증권", "phone": "02-3774-7017, 7151, 6805", "ir": "2026년 10월 12일(월) ~ 2026년 10월 21일(수)", "confirm": "2026년 10월 30일(금)", "revisions": 2, "changed": ""}, {"rcp": "20261002000390", "date": "2026-10-02", "corp": "케이엠에프", "start": "2026-11-16", "end": "2026-11-20", "close": "17:00", "firm": "IBK투자증권", "phone": "02-6915-5337, 02-6915-5338, 02-6915-5799", "ir": "2026년 10월 19일(월) ~ 2026년 11월 13일(금)", "confirm": "2026년 11월 23일(월)", "revisions": 0, "changed": ""}, {"rcp": "20261007000505", "date": "2026-10-07", "corp": "제논", "start": "2026-10-26", "end": "2026-10-30", "close": "17:00", "firm": "삼성증권", "phone": "02-2020-8023, 7653, 7850", "ir": "2026년 10월 12일(월) ~ 2026년 10월 23일(금)", "confirm": "2026년 11월 03일(화)", "revisions": 0, "changed": ""}, {"rcp": "20261008000310", "date": "2026-10-08", "corp": "인텔리빅스", "start": "2026-10-12", "end": "2026-10-16", "close": "17:00", "firm": "미래에셋증권", "phone": "02-3774-7147, 3921, 6085", "ir": "2026년 10월 12일(월) ~ 2026년 10월 16일(금)", "confirm": "2026년 10월 20일(화)", "revisions": 1, "changed": ""}, {"rcp": "20261008000649", "date": "2026-10-08", "corp": "영광와이케이엠씨", "start": "2026-10-27", "end": "2026-11-02", "close": "17:00", "firm": "대신증권", "phone": "02-769-2743, 02-769-2741", "ir": "2026년 10월 27일(화) ~ 2026년 11월 02일(월)", "confirm": "2026년 11월 03일(화)", "revisions": 0, "changed": ""}, {"rcp": "20261008000660", "date": "2026-10-08", "corp": "엔키화이트햇", "start": "2026-11-03", "end": "2026-11-09", "close": "", "firm": "신영증권", "phone": "02-2004-9554, 9414, 9230", "ir": "2026년 10월 30일(금) ~ 2026년 11월 05일(목)", "confirm": "", "revisions": 0, "changed": ""}, {"rcp": "20261008000705", "date": "2026-10-08", "corp": "다비오", "start": "2026-11-02", "end": "2026-11-06", "close": "17:00", "firm": "대신증권", "phone": "02-769-2752, 02-769-2294", "ir": "2026년 10월 19일(월) ~ 2026년 10월 28일(수)", "confirm": "2026년 11월 9일(월)", "revisions": 1, "changed": ""}, {"rcp": "20261012000149", "date": "2026-10-12", "corp": "SimwonAmericaCorp.", "start": "", "end": "", "close": "", "firm": "", "phone": "", "ir": "", "confirm": "", "revisions": 0, "changed": ""}, {"rcp": "20261012000445", "date": "2026-10-12", "corp": "아델", "start": "2026-11-12", "end": "2026-11-18", "close": "17:00", "firm": "삼성증권", "phone": "02-2020-8213, 6661", "ir": "2026년 11월 2일(월) ~ 2026년 11월 17일(화)", "confirm": "2026년 11월 20일(금)", "revisions": 0, "changed": ""}, {"rcp": "20261015000329", "date": "2026-10-15", "corp": "엠비디", "start": "2026-11-02", "end": "2026-11-06", "close": "17:00", "firm": "하나증권", "phone": "02-3771-3482, 3278, 3499, 3120", "ir": "2026년 10월 26일(월) ~ 2026년 11월 03일(화)", "confirm": "2026년 11월 10일(화)", "revisions": 1, "changed": ""}, {"rcp": "20261016000412", "date": "2026-10-16", "corp": "씨앤엠", "start": "2026-11-03", "end": "2026-11-09", "close": "17:00", "firm": "한국투자증권", "phone": "02-3276-5958, 6917", "ir": "2026년 10월 26일(월) ~ 2026년 11월 6일(금)", "confirm": "2026년 11월 11일(수)", "revisions": 0, "changed": ""}, {"rcp": "20261016000426", "date": "2026-10-16", "corp": "제이앤티지", "start": "2026-11-03", "end": "2026-11-09", "close": "17:00", "firm": "대신증권", "phone": "02-769-2723, 02-769-2293", "ir": "2026년 11월 03일(화) ~ 2026년 11월 09일(월)", "confirm": "2026년 11월 11일(수)", "revisions": 0, "changed": ""}, {"rcp": "20261019000343", "date": "2026-10-19", "corp": "씨아이에스케미칼", "start": "2026-11-30", "end": "2026-12-04", "close": "17:00", "firm": "KB증권", "phone": "02-6114-0972, 1671", "ir": "2026년 11월 23일(월) ~ 2026년 12월 04일(금)", "confirm": "2026년 12월 08일(화)", "revisions": 0, "changed": ""}, {"rcp": "20261019000368", "date": "2026-10-19", "corp": "에스에프씨", "start": "2026-11-09", "end": "2026-11-13", "close": "17:00", "firm": "미래에셋증권", "phone": "02-3774-7160, 7071, 7147", "ir": "2026년 10월 28일(수) ~ 2026년 11월 12일(목)", "confirm": "2026년 11월 17일(화)", "revisions": 0, "changed": ""}, {"rcp": "20261020000375", "date": "2026-10-20", "corp": "에이엔에이치스트럭쳐", "start": "2026-11-19", "end": "2026-11-25", "close": "17:00", "firm": "NH투자증권", "phone": "02-2229-6315, 6829", "ir": "2026년 11월 17일(화) ~ 2026년 11월 25일(수)", "confirm": "2026년 11월 26일(목)", "revisions": 0, "changed": ""}, {"rcp": "20261021000153", "date": "2026-10-21", "corp": "이노보테라퓨틱스", "start": "2026-11-26", "end": "2026-12-02", "close": "17:00", "firm": "한국투자증권", "phone": "02-3276-5958, 6917", "ir": "2026년 11월 16일(월) ~ 2026년 12월 01일(화)", "confirm": "2026년 12월 04일(금)", "revisions": 0, "changed": ""}, {"rcp": "20261021000443", "date": "2026-10-21", "corp": "유캐스트", "start": "2026-11-09", "end": "2026-11-13", "close": "17:00", "firm": "유진투자증권", "phone": "02-368-6353, 6349, 6397, 6398, 6352", "ir": "2026년 10월 28일(수) ~ 2026년 11월 06일(금)", "confirm": "2026년 11월 17일(화)", "revisions": 1, "changed": ""}];
+const UPDATED = "2026-10-22 16:00";
+
+const DOW = "일월화수목금토";
+const today = new Date(); today.setHours(0,0,0,0);
+const P = s => { if(!s) return null; const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const DAY = 864e5;
+const fmt = d => `${d.getMonth()+1}/${d.getDate()}(${DOW[d.getDay()]})`;
+const shortK = s => String(s||"").replace(/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일\s*(\([월화수목금토일]\))?/g,
+  (_,y,m,d,w)=>`${+m}/${+d}${w||""}`);
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+DATA.forEach(r=>{
+  r.s=P(r.start); r.e=P(r.end);
+  r.phase = !r.s ? "none" : r.e < today ? "done" : r.s > today ? "up" : "live";
+});
+
+/* 상단 요약 */
+document.getElementById("updated").textContent = `마지막 업데이트 ${UPDATED}`;
+(function brief(){
+  const wkEnd = new Date(today); wkEnd.setDate(today.getDate() + (7 - today.getDay()) % 7);
+  const live = DATA.filter(r=>r.phase==="live").length;
+  const week = DATA.filter(r=>r.phase==="up" && r.s<=wkEnd).length;
+  const fresh = DATA.filter(r=>(today-P(r.date))/DAY<=7).length;
+  const chg = DATA.filter(r=>r.changed && r.phase!=="done").length;
+  let t = `오늘 수요예측 진행 중 <b>${live}건</b>, 이번 주 안에 시작하는 곳 <b>${week}건</b>. 최근 7일 새로 올라온 신고서 <b>${fresh}건</b>.`;
+  if(chg) t += ` <span class="warn">정정으로 일정이 바뀐 곳 ${chg}건</span>`;
+  document.getElementById("brief").innerHTML = t;
+})();
+
+/* 타임라인: 지난 7일 ~ 마지막 종료일(최대 8주) */
+(function timeline(){
+  const BACK = 3;
+  const rows = DATA.filter(r=>r.s && r.e >= new Date(today-BACK*DAY)).sort((a,b)=>a.s-b.s);
+  const grid = document.getElementById("grid");
+  if(!rows.length){ grid.outerHTML='<div class="empty">앞으로 잡힌 수요예측이 없습니다. 새 신고서가 올라오면 여기에 표시됩니다.</div>'; return; }
+  const from = new Date(today-BACK*DAY);
+  let to = new Date(Math.max(...rows.map(r=>r.e)));
+  to = new Date(Math.min(to, +today + 56*DAY)); to = new Date(+to + 2*DAY);
+  const days = Math.round((to-from)/DAY)+1;
+  const NAMEW = 150;
+  const COLW = Math.max(24, Math.floor((grid.parentElement.clientWidth - NAMEW - 2) / days));
+  grid.style.minWidth = (NAMEW + days*COLW) + "px";
+  grid.style.gridTemplateColumns = `${NAMEW}px repeat(${days}, ${COLW}px)`;
+  let h = `<div class="name muted" style="border-bottom:1px solid var(--line);font-weight:400;font-size:12px">${from.getMonth()+1}월</div>`;
+  for(let i=0;i<days;i++){
+    const d = new Date(+from + i*DAY);
+    const cls = ["dayhead", d.getDay()===1?"mon":"", +d===+today?"today":""].join(" ");
+    const lab = (i>0 && d.getDate()===1) ? `${d.getMonth()+1}/${d.getDate()}` : `${d.getDate()}`;
+    h += `<div class="${cls}">${lab}<br>${DOW[d.getDay()]}</div>`;
+  }
+  rows.forEach(r=>{
+    h += `<div class="name" tabindex="0" data-rcp="${r.rcp}">${esc(r.corp)}</div>`;
+    for(let i=0;i<days;i++){ const d=new Date(+from+i*DAY); h += `<div class="cell ${d.getDay()%6===0?"we":""}"></div>`; }
+  });
+  grid.innerHTML = h;
+  const headH = grid.querySelector(".dayhead").offsetHeight;
+  rows.forEach((r,idx)=>{
+    const s = Math.max(0, Math.round((r.s-from)/DAY)), e = Math.min(days-1, Math.round((r.e-from)/DAY));
+    if(e<0) return;
+    const b = document.createElement("div");
+    b.className = `bar ${r.phase} ${r.changed?"chg":""}`;
+    b.style.left = (NAMEW + s*COLW + 2)+"px";
+    b.style.width = ((e-s+1)*COLW - 4)+"px";
+    b.style.top = (headH + idx*34 + 7)+"px";
+    b.textContent = r.firm || "";
+    b.title = `${r.corp}\n수요예측 ${fmt(r.s)} ~ ${fmt(r.e)} ${r.close||""}\n${r.firm||""} ${r.phone||""}`;
+    b.dataset.rcp = r.rcp;
+    grid.appendChild(b);
+  });
+  const tl = document.createElement("div");
+  tl.className="todayline"; tl.style.left = (NAMEW + BACK*COLW + COLW/2 - 1)+"px";
+  grid.appendChild(tl);
+  grid.addEventListener("click", ev=>{ const t=ev.target.closest("[data-rcp]"); if(t) jump(t.dataset.rcp); });
+  grid.addEventListener("keydown", ev=>{ if(ev.key==="Enter"){ const t=ev.target.closest("[data-rcp]"); if(t) jump(t.dataset.rcp);} });
+})();
+
+/* 표 */
+let filter="all";
+function render(){
+  const q = document.getElementById("q").value.trim();
+  const list = DATA.filter(r=>{
+    if(filter==="chg" && !r.changed) return false;
+    if(!["all","chg"].includes(filter) && r.phase!==filter) return false;
+    if(q && !(r.corp+r.firm).includes(q)) return false;
+    return true;
+  }).sort((a,b)=> b.rcp.localeCompare(a.rcp));
+  const tb = document.getElementById("rows");
+  if(!list.length){ tb.innerHTML = `<tr><td colspan="9" class="empty">조건에 맞는 신고서가 없습니다.</td></tr>`; return; }
+  tb.innerHTML = list.map(r=>{
+    let st;
+    if(r.phase==="live") st=`<span class="badge b-live">진행 중</span> <span class="muted">${Math.round((r.e-today)/DAY)===0?"오늘 마감":"마감 D-"+Math.round((r.e-today)/DAY)}</span>`;
+    else if(r.phase==="up") st=`<span class="badge b-up">예정</span> <span class="dday">D-${Math.round((r.s-today)/DAY)}</span>`;
+    else if(r.phase==="done") st=`<span class="badge b-done">종료</span>`;
+    else st=`<span class="badge b-none">원문 확인</span>`;
+    const period = r.s ? `${fmt(r.s)} ~ ${fmt(r.e)}` : `<span class="muted">-</span>`;
+    const rev = r.revisions ? `<div class="rev">정정 ${r.revisions}회</div>` : "";
+    const note = r.changed ? `<div class="chgnote">${esc(r.changed)}</div>` : "";
+    return `<tr id="r${r.rcp}" class="${r.changed&&r.phase!=="done"?"chg":""}">
+      <td>${esc(r.date)}</td>
+      <td><a class="corp" href="https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${r.rcp}" target="_blank" rel="noopener" title="DART 원문 열기">${esc(r.corp)}</a>${rev}</td>
+      <td>${st}</td>
+      <td>${period}${note}</td>
+      <td>${esc(r.close)||'<span class="muted">-</span>'}</td>
+      <td>${esc(r.firm)||'<span class="muted">-</span>'}</td>
+      <td class="phone wr">${esc(r.phone)||'<span class="muted">-</span>'}</td>
+      <td class="muted">${esc(shortK(r.ir))||"-"}</td>
+      <td class="muted">${esc(shortK(r.confirm))||"-"}</td>
+    </tr>`;
+  }).join("");
+}
+function jump(rcp){
+  filter="all"; document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c.dataset.f==="all"));
+  document.getElementById("q").value=""; render();
+  const tr=document.getElementById("r"+rcp); if(!tr) return;
+  tr.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"center"});
+  tr.classList.add("flash"); setTimeout(()=>tr.classList.remove("flash"),1800);
+}
+document.querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+  filter=c.dataset.f; document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed", x===c)); render();
+}));
+document.getElementById("q").addEventListener("input",render);
+render();
+</script>
+</body>
+</html>
